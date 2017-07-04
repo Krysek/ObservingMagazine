@@ -1,3 +1,4 @@
+source("spiegel.dt.R")
 require(XML)
 require(gdata)
 
@@ -28,64 +29,24 @@ spiegel.get<- function (url) {
 # }
 
 
-
-spiegel.extractDataFromHeadlineFiles <- function (dfHeadlineFiles, lessInfo = FALSE) {
-   df <- data_frame()
-   
-   rows <- nrow(dfHeadlineFiles)
-   
-   if (rows > 0) {
-      for(i in 1:nrow(dfHeadlineFiles)) {
-         df <- rbind(df, spiegel.extractDataFromHeadlineFile(dfHeadlineFiles[i,], lessInfo=lessInfo))
-      }
-   }
-   
-   if(spiegel.online.debug) {
-      print("spiegel.extractDataFromHeadlineFiles Parameter headlineFile:")
-      print(df)
-   }
-   
-   df
-}
-
-
-spiegel.extractDataFromHeadlineFiles2 <- function (dfHeadlineFiles, lessInfo = FALSE) {
-   df <- data_frame()
-   
-   rows <- nrow(dfHeadlineFiles)
-   
-   if (rows > 0) {
-      for(i in 1:nrow(dfHeadlineFiles)) {
-         df <- rbind(df, spiegel.extractDataFromHeadlineFile(dfHeadlineFiles[i,], lessInfo=lessInfo))
-      }
-   }
-   
-   if(spiegel.online.debug) {
-      print("spiegel.extractDataFromHeadlineFiles Parameter headlineFile:")
-      print(df)
-   }
-   
-   df
-}
-
-spiegel.extractDataFromHeadlineFile <- function (headlineFile, startID = 1, lessInfo = FALSE) {
+spiegel.algo.parseHeadlineFile <- function (headlineFile, startID = 1, lessInfo = FALSE) {
    if(spiegel.online.debug) {
       print("spiegel.extractDataFromHeadlineFile Parameter headlineFile:")
       print(headlineFile)
    }
    
-   htmlCode <- read_html(as.character(headlineFile$fullFilePath))
+   htmlCode <- read_html(as.character(headlineFile[, file.fllPath]))
    
    content        <- html_nodes(htmlCode, css = ".column-wide")
    headlines      <- html_nodes(content, "li")
+   headlines.rows <- length(headlines)
    
-   df <- data_frame()
+   dtHeadline <- spiegel.dt.dtHeadline()
    id <- startID
    
-   rows <- length(headlines)
    
-   if (rows > 0) {
-      for(i in 1:rows) {
+   if (headlines.rows > 0) {
+      for(i in 1:headlines.rows) {
          headline <- headlines[i]
          
          #Extract Links
@@ -94,6 +55,9 @@ spiegel.extractDataFromHeadlineFile <- function (headlineFile, startID = 1, less
                                           ifelse(identical(., character(0)), NA, .)
          class             <- html_nodes(headline, "a") %>%
                                           html_attr("class")  %>% 
+                                          ifelse(identical(., character(0)), NA, .)
+         sectionAndTime    <- html_nodes(headline, css = ".headline-date") %>% 
+                                          html_text(trim = TRUE) %>% 
                                           ifelse(identical(., character(0)), NA, .)
          
          isBentoLink                                 <- regexpr("bento", class) > 0
@@ -108,6 +72,12 @@ spiegel.extractDataFromHeadlineFile <- function (headlineFile, startID = 1, less
             }
          }
          
+         pattern <- "[0-9]{1,2}:[0-9]{1,2})$"
+         reg.out <- regexpr(pattern, sectionAndTime)
+         forTime <- paste(substr(sectionAndTime, reg.out, reg.out + attr(reg.out,"match.length")-2), 
+                          spiegel.online.timezone)
+         forDatetime <- ymd_hm(paste0(headlineFile[, forDate], " ", forTime))
+         
          if(lessInfo == FALSE) {
             intro             <- html_nodes(headline, css = ".news-archive-headline-intro") %>% 
                                              html_text(trim = TRUE) %>% 
@@ -115,44 +85,33 @@ spiegel.extractDataFromHeadlineFile <- function (headlineFile, startID = 1, less
             title             <- html_nodes(headline, css = ".news-archive-headline") %>% 
                                              html_text(trim = TRUE) %>% 
                                              ifelse(identical(., character(0)), NA, .)
-            sectionAndTime    <- html_nodes(headline, css = ".headline-date") %>% 
-                                             html_text(trim = TRUE) %>% 
-                                             ifelse(identical(., character(0)), NA, .)
             
-            pattern <- "[0-9]{1,2}:[0-9]{1,2})$"
-            reg.out <- regexpr(pattern, sectionAndTime)
-            forTime <- paste(substr(sectionAndTime, reg.out, reg.out + attr(reg.out,"match.length")-2), 
-                             spiegel.online.timezone)
-            forDatetime <- ymd_hm(paste0(headlineFile$forDate, " ", forTime))
             
             pattern <- ", [[0-9]{1,2}:[0-9]{1,2})$"
             reg.out <- regexpr(pattern, sectionAndTime)
             section <- substr(sectionAndTime, 2, reg.out-1)
             
-            df <- rbind(df,
-                        data_frame( id                   = id,
-                                    forDate              = headlineFile$forDate,
-                                    forTime              = forDatetime,
-                                    inDate               = headlineFile$inDate,
-                                    inTime               = headlineFile$inTime,
-                                    dlFullPath           = headlineFile$fullDownloadDir,
-                                    rawDirFullPath       = headlineFile$fullRawDirPath,
-                                    rawFileName          = headlineFile$fileName,
-                                    headlineFileFullPath = headlineFile$fullFilePath,
-                                    isBentoLink          = isBentoLink,
-                                    isSpiegelPlusLink    = isSpiegelPlusLink,
-                                    intro                = intro, 
-                                    title                = title, 
-                                    section              = section, 
-                                    link                 = link))
-         } else {
-            df <- rbind(df,
-                        data_frame( id                   = id,
-                                    rawDirFullPath       = headlineFile$fullRawDirPath,
-                                    rawFileName          = headlineFile$fileName,
-                                    isBentoLink          = isBentoLink,
-                                    isSpiegelPlusLink    = isSpiegelPlusLink,
-                                    link                 = link))
+            dtHeadline <- rbind(dtHeadline,
+                                spiegel.dt.dtHeadline(id                   = id,
+                                                      forDate              = headlineFile[, forDate],
+                                                      forTime              = forDatetime,
+                                                      isBentoLink          = isBentoLink,
+                                                      isSpiegelPlusLink    = isSpiegelPlusLink,
+                                                      intro                = intro, 
+                                                      title                = title, 
+                                                      section              = section, 
+                                                      link                 = link))
+         } else {   ###  short Headfile edit
+            dtHeadline <- rbind(dtHeadline,
+                                spiegel.dt.dtHeadline(id                   = id,
+                                                      forDate              = headlineFile[, forDate],
+                                                      forTime              = forDatetime,
+                                                      isBentoLink          = isBentoLink,
+                                                      isSpiegelPlusLink    = isSpiegelPlusLink,
+                                                      intro                = "", 
+                                                      title                = "", 
+                                                      section              = "", 
+                                                      link                 = link))
          }
          id = id + 1
       }
@@ -163,5 +122,5 @@ spiegel.extractDataFromHeadlineFile <- function (headlineFile, startID = 1, less
       print(head(df))
    }
    
-   df
+   dtHeadline
 }

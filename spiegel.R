@@ -1,3 +1,4 @@
+source("spiegel.dt.R")
 source("spiegel.online.R")
 source("spiegel.local.R")
 source("spiegel.algo.R")
@@ -39,7 +40,7 @@ test.extractHeadlineDataCmp <- function() {
    files <- spiegel.local.headlineOverview.listHeadlineFiles(spiegel.local.headlineOverview.listDownloadDirs())
    
    startTime <- now()
-   data <- spiegel.extractDataFromHeadlineFiles(files)
+   data <- spiegel.local.getHeadlines(files)
    endtime <- now()
    diff1 <- endtime - startTime
    print(diff1)
@@ -58,8 +59,3 @@ spiegel.observe <- function() {
    spiegel.local.headlineOverview.downloadPages()
 }
 
-#startTime <- now()
-#test <- test.extractHeadlineData()
-#head(test)
-#endtime <- now()
-#diff <- endtime - startTime

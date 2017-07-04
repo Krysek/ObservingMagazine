@@ -1,3 +1,4 @@
+source("spiegel.dt.R")
 require(rvest)
 require(lubridate)
 
@@ -51,14 +52,14 @@ spiegel.online.archive.url.getURL <- function (vecForDates) {
    vecForDates <- format(vecForDates, format="%d.%m.%Y")
    
    if(length(vecForDates) > 0) {
-      urls <- paste0(spiegel.online.archive.url.prefix,
+      vecURLs <- paste0(spiegel.online.archive.url.prefix,
                      vecForDates,
                      ".html")
    } else {
-      urls <- NULL
+      vecURLs <- character(0)
    }
-   print(urls)
-   urls
+   
+   vecURLs
 }
 
 # #spiegel.online.archive.url.getURLs <- function (dates = spiegel.local.general.getObservedDates()) {
