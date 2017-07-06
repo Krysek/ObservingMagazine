@@ -91,8 +91,20 @@ spiegel.algo.parseHeadlineFile <- function (headlineFile, startID = 1, lessInfo 
             reg.out <- regexpr(pattern, sectionAndTime)
             section <- substr(sectionAndTime, 2, reg.out-1)
             
-            dtHeadline <- rbind(dtHeadline,
+            # dtHeadline <- rbind(dtHeadline,
+            #                     spiegel.dt.dtHeadline(id                   = id,
+            #                                           forDate              = headlineFile[, forDate],
+            #                                           forTime              = forDatetime,
+            #                                           isBentoLink          = isBentoLink,
+            #                                           isSpiegelPlusLink    = isSpiegelPlusLink,
+            #                                           intro                = intro, 
+            #                                           title                = title, 
+            #                                           section              = section, 
+            #                                           link                 = link))
+            dtHeadline <- rbindlist(list(dtHeadline,
                                 spiegel.dt.dtHeadline(id                   = id,
+                                                      idHeadline           = i,
+                                                      idHeadlineFile       = NA,
                                                       forDate              = headlineFile[, forDate],
                                                       forTime              = forDatetime,
                                                       isBentoLink          = isBentoLink,
@@ -100,10 +112,12 @@ spiegel.algo.parseHeadlineFile <- function (headlineFile, startID = 1, lessInfo 
                                                       intro                = intro, 
                                                       title                = title, 
                                                       section              = section, 
-                                                      link                 = link))
+                                                      link                 = link)))
          } else {   ###  short Headfile edit
-            dtHeadline <- rbind(dtHeadline,
+            dtHeadline <- rbindlist(list(dtHeadline,
                                 spiegel.dt.dtHeadline(id                   = id,
+                                                      idHeadline           = i,
+                                                      idHeadlineFile       = NA,
                                                       forDate              = headlineFile[, forDate],
                                                       forTime              = forDatetime,
                                                       isBentoLink          = isBentoLink,
@@ -111,7 +125,17 @@ spiegel.algo.parseHeadlineFile <- function (headlineFile, startID = 1, lessInfo 
                                                       intro                = "", 
                                                       title                = "", 
                                                       section              = "", 
-                                                      link                 = link))
+                                                      link                 = link)))
+            # dtHeadline <- rbind(dtHeadline,
+            #                     spiegel.dt.dtHeadline(id                   = id,
+            #                                           forDate              = headlineFile[, forDate],
+            #                                           forTime              = forDatetime,
+            #                                           isBentoLink          = isBentoLink,
+            #                                           isSpiegelPlusLink    = isSpiegelPlusLink,
+            #                                           intro                = "", 
+            #                                           title                = "", 
+            #                                           section              = "", 
+            #                                           link                 = link))
          }
          id = id + 1
       }

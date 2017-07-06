@@ -6,7 +6,22 @@ source("spiegel.algo.R")
 spiegel.debug <- FALSE
 
 test.download <- function() {
-   spiegel.local.headlineOverview.downloadPages(as_date("2017-06-20"), as_date("2017-06-29"))
+   
+   startTime <- now()
+   spiegel.local.headlineOverview.downloadPages(addUpdates = TRUE)
+   startTime <- now()
+   print(startTime)
+   lsFileStructur <- spiegel.dt.lsFileStructur()
+   lsFileStructur <- spiegel.local.headlineOverview.listDownloadDirs(lsFileStructur)
+   lsFileStructur <- spiegel.local.headlineOverview.listHeadlineFiles(lsFileStructur)
+   lsFileStructur <- spiegel.local.getHeadlines(lsFileStructur, lessInfo=TRUE)
+   print("URLs extracted")
+   print(now())
+   spiegel.local.articel.download(lsFileStructur)
+   endtime <- now()
+   print(endtime)
+   diff1 <- endtime - startTime
+   print(diff1)
    # spiegel.local.headlineOverview.download(as_date("2017-06-20"))
 }
 

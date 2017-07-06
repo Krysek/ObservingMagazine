@@ -6,14 +6,14 @@ require(dplyr)
 # Spiegel.local
 # Init global variables
 spiegel.local.debug                             <- FALSE
-spiegel.local.general.rootDirName               <- "data"
-spiegel.local.general.rawHeadlineDirName        <- "rawHeadlineFiles"
-spiegel.local.general.rawArticleDirName         <- "rawArticleFiles"
+spiegel.local.general.rootDirName               <- "../ObservingMagazine-Data"
+spiegel.local.general.rawHeadlineDirName        <- "rawHF"
+spiegel.local.general.rawArticleDirName         <- "rawAF"
 spiegel.local.general.articleFileName           <- "article"
 spiegel.local.general.prefixForDownloadDir      <- "forDate"
 spiegel.local.general.processedHeadlineFilename <- "headlineData.csv"
 spiegel.local.general.timezone                  <- "CET"
-spiegel.local.general.observedStartDate         <- as_date("2017-06-25")
+spiegel.local.general.observedStartDate         <- as_date("2016-07-01")
 spiegel.local.general.observedEndDate           <- NULL
 spiegel.local.download.startDownloadInDate      <- today()
 spiegel.local.general.TimeFormatForFileName     <- "%Y-%m-%d %H-%M-%S %Z"
@@ -63,6 +63,10 @@ spiegel.local.general.setprocessedHeadlineFilename <- function(name) {
 
 spiegel.local.general.getRawHeadlineDirName <- function() {
    spiegel.local.general.rawHeadlineDirName
+}
+
+spiegel.local.general.getRawArticleDirName <- function() {
+   spiegel.local.general.rawArticleDirName
 }
 
 spiegel.local.general.getPrefixForDownloadDir <- function() {
@@ -122,9 +126,9 @@ spiegel.local.download.createDownloadStructure <- function(vecForDate) {
       }
       
       # Create article  dirs
-      vecRawArticleDirsFullPath <- paste0(vecDownloadDirsFullPath,
+      vecRawArticleDirsFullPath <- paste0(vecRawHeadlineDirsFullPath,
                                        "/", 
-                                       spiegel.local.general.getRawHeadlineDirName())
+                                       spiegel.local.general.getRawArticleDirName())
       
       for(rawArticleDirsFullPath in vecRawArticleDirsFullPath) {
          if (file.exists(rawArticleDirsFullPath) == FALSE) {
@@ -146,7 +150,9 @@ spiegel.local.general.getRootFullPath <- function() {
    spiegel.local.general.rootDirName
 }
 
-spiegel.local.headlineOverview.downloadPages <- function(startDate = spiegel.local.general.getObservedStartDate(), endDate = spiegel.local.general.getObservedEndDate(), addUpdates = FALSE) {
+spiegel.local.headlineOverview.downloadPages <- function(startDate = spiegel.local.general.getObservedStartDate(), 
+                                                         endDate = spiegel.local.general.getObservedEndDate(), 
+                                                         addUpdates = FALSE) {
    if(is.null(endDate) || endDate >= today()) {
       endDate <- today() - days(1)
    }
@@ -156,12 +162,13 @@ spiegel.local.headlineOverview.downloadPages <- function(startDate = spiegel.loc
    vecForDates <- spiegel.local.general.getObservedDates(startDate, endDate)
    
    if (addUpdates == FALSE) {
-      dtDownloadDirs <- spiegel.local.headlineOverview.listDownloadDirs()
+      spiegel.dt.lsFileStructur <- spiegel.local.headlineOverview.listDownloadDirs()
+      dtDlDir <- spiegel.dt.lsFileStructur$dtDlDir
       
-      if(dtDownloadDirs[, (length(id))] > 0){
-         dfList <- spiegel.local.headlineOverview.listHeadlineFiles(dtDownloadDirs)
-         if(nrow(dfList) > 0) {
-            vecAvailableForDates <- (dfList %>% select(forDate) %>% distinct())$forDate
+      if(dtDlDir[, (length(id))] > 0){
+         dfList <- spiegel.local.headlineOverview.listHeadlineFiles(dtDlDir)
+         if(dfList[, length(id)] > 0) {
+            vecAvailableForDates <- dfList[, unique(forDate)]
             vecForDates <- vecForDates[!(vecForDates %in% vecAvailableForDates)]
          }
       }
@@ -187,7 +194,6 @@ spiegel.local.headlineOverview.downloadPages <- function(startDate = spiegel.loc
       for(i in 1:vecURLs.len) {
          if (!file.exists(vecFilepaths[i])) {
             download.file(vecURLs[i], vecFilepaths[i], method="curl")
-            print(vecURLs[i])
          }
       } 
    }
@@ -201,7 +207,8 @@ spiegel.local.isRootDirAvailable <- function() {
    }
 }
 
-spiegel.local.headlineOverview.listDownloadDirs <- function() {
+spiegel.local.headlineOverview.listDownloadDirs <- function(lsFileStructur = spiegel.dt.lsFileStructur()) {
+   lsFileStructur = spiegel.dt.lsFileStructur()
    
    pattern <- paste0("^",
                  spiegel.local.general.getPrefixForDownloadDir(),
@@ -221,20 +228,27 @@ spiegel.local.headlineOverview.listDownloadDirs <- function() {
    reg.out <- regexpr(pattern, vecDlDir)
    vecForDate <- as_date(substr(vecDlDir, reg.out, reg.out + attr(reg.out,"match.length")-1))
    
+   dtDlDir    <- spiegel.dt.dtDlDir()
    vecId      <- 1:length(vecDlDir)
    
-   dtDlDir <- spiegel.dt.dtDlDir(id            = vecId,
-                                 forDate       = vecForDate,
-                                 dlDir         = vecDlDir, 
-                                 dlDir.fllPath = vecDlDir.fllPath)
-   
-   
-   if(spiegel.local.debug) {
-      print("spiegel.local.headlineOverview.listDownloadDirs Result:")
-      print(lsDlDir)
+   if(length(vecDlDir) > 0) {
+      dtDlDir <- rbindlist(list(dtDlDir,
+                                spiegel.dt.dtDlDir(id            = vecId,
+                                                   forDate       = vecForDate,
+                                                   dlDir         = vecDlDir, 
+                                                   dlDir.fllPath = vecDlDir.fllPath)))
+      
+      
+      if(spiegel.local.debug) {
+         print("spiegel.local.headlineOverview.listDownloadDirs Result:")
+         print(lsDlDir)
+      }
    }
+   lsFileStructur$dtDlDir <- dtDlDir
+   lsFileStructur$dtHeadlineFile <- spiegel.dt.dtHeadlineFile()
+   lsFileStructur$dtHeadline <- spiegel.dt.dtHeadline()
    
-   dtDlDir
+   lsFileStructur
 }
 
 spiegel.local.headlineOverview.haveDownloadDirsRawDir <- function(vecDownloadDirs) {
@@ -251,12 +265,14 @@ spiegel.local.headlineOverview.haveDownloadDirsRawDir <- function(vecDownloadDir
 }
 
 #### hier
-## spiegel.local.headlineOverview.listHeadlineFiles       dtDlDir <-> lsDlDir
-spiegel.local.headlineOverview.listHeadlineFiles <- function(dtDlDir = spiegel.local.headlineOverview.listDownloadDirs()) {
+spiegel.local.headlineOverview.listHeadlineFiles <- function(lsFileStructur = spiegel.local.headlineOverview.listDownloadDirs()
+                                                             ) {
    if(spiegel.local.debug) {
       print("spiegel.local.headlineOverview.listHeadlineFiles Parameter dfDownloadDirs: ")
-      print(dfDownloadDirs)
+      print(lsFileStructur)
    }
+   
+   dtDlDir <- lsFileStructur$dtDlDir
    
    # take only dirs with raw dir over
    dtDlDir <- dtDlDir[spiegel.local.headlineOverview.haveDownloadDirsRawDir(dtDlDir[, dlDir.fllPath]), ]
@@ -289,7 +305,8 @@ spiegel.local.headlineOverview.listHeadlineFiles <- function(dtDlDir = spiegel.l
             
             vecInDatetime <- ymd_hms(vecStrDatetime)
             
-            dtHeadlineFile <- rbind(dtHeadlineFile,
+            
+            dtHeadlineFile <- rbindlist(list(dtHeadlineFile,
                                     spiegel.dt.dtHeadlineFile(id               = vecId,
                                                               idDlDir          = dtDlDir[i, id],
                                                               forDate          = dtDlDir[i, forDate],
@@ -300,8 +317,21 @@ spiegel.local.headlineOverview.listHeadlineFiles <- function(dtDlDir = spiegel.l
                                                               rawDir           = spiegel.local.general.getRawHeadlineDirName(),
                                                               rawDir.fllPath   = vecRawDir,
                                                               file.fllPath     = vecFullFilePath,
-                                                              file             = vecFileNames)
-                        )
+                                                              file             = vecFileNames))
+            )
+            # dtHeadlineFile <- rbind(dtHeadlineFile,
+            #                         spiegel.dt.dtHeadlineFile(id               = vecId,
+            #                                                   idDlDir          = dtDlDir[i, id],
+            #                                                   forDate          = dtDlDir[i, forDate],
+            #                                                   inDate           = as_date(vecInDatetime),
+            #                                                   inTime           = vecInDatetime,
+            #                                                   dlDir            = dtDlDir[i, dlDir],
+            #                                                   dlDir.fllPath    = dtDlDir[i, dlDir.fllPath],
+            #                                                   rawDir           = spiegel.local.general.getRawHeadlineDirName(),
+            #                                                   rawDir.fllPath   = vecRawDir,
+            #                                                   file.fllPath     = vecFullFilePath,
+            #                                                   file             = vecFileNames)
+            #             )
          }
          startId <- dtHeadlineFile[, length(id)] + 1
       }
@@ -312,26 +342,43 @@ spiegel.local.headlineOverview.listHeadlineFiles <- function(dtDlDir = spiegel.l
       print(head(df))
    }
    
-   dtHeadlineFile
+   lsFileStructur$dtHeadlineFile <- dtHeadlineFile
+   
+   lsFileStructur
 }
 
-
-spiegel.local.articel.download <- function(URLs , downloadDir) {
-   spiegel.local.download.updateStartDownloadInDate()
-   spiegel.local.download.createACTDownloadDir()
+spiegel.local.articel.download <- function(lsFileStructur = spiegel.local.getHeadlines()) {
+   dtHeadlineFile <- lsFileStructur$dtHeadlineFile
+   dtHeadline     <- lsFileStructur$dtHeadline
    
-   for (download in 1:nrow(URLs)) {
-      filepath <- paste0(spiegel.local.download.getDownloadDirsFullPath(),
-                         "/", 
-                         spiegel.local.general.rawArticleDirName, 
-                         "/", 
-                         URLs[download, 1],
-                         ".html")
-      
-      if (!file.exists(filepath)){
-         download.file(URLs[download, 2], filepath, method="curl")
-      } 
-   }  
+   spiegel.local.download.createDownloadStructure(dtHeadline[, unique(forDate)])
+   
+   dtHeadline.len <- dtHeadline[, length(id)]
+   
+   if(dtHeadline.len > 0) {
+      for (i in 1:dtHeadline.len) {
+         headline <- dtHeadline[i, ]
+         headlineFile <- dtHeadlineFile[id == headline[, idHeadlineFile], ]
+         
+         
+         filepath <- paste0(headlineFile[ , rawDir.fllPath],
+                            "/", 
+                            spiegel.local.general.getRawArticleDirName(), 
+                            "/", 
+                            substr(headlineFile[, file] ,1 , nchar(headlineFile[, file])-5),
+                            " -",
+                            headline[, idHeadline],
+                            "- ",
+                            format(as_datetime(now()), 
+                                   format = spiegel.local.general.TimeFormatForFileName, 
+                                   tz=spiegel.local.general.timezone),
+                            ".html")
+         
+         if (!file.exists(filepath)){
+            download.file(headline[, link], filepath, method="curl")
+         } 
+      }
+   }
 }
 
 
@@ -344,7 +391,10 @@ spiegel.local.headlineOverview.storeHeadlineData <- function(data, dir, overwrit
 }
 
 
-spiegel.local.getHeadlines <- function (dtHeadlineFiles, lessInfo = FALSE) {
+spiegel.local.getHeadlines <- function (lsFileStructur = spiegel.local.headlineOverview.listHeadlineFiles(), 
+                                        lessInfo = FALSE) {
+   dtHeadlineFiles <- lsFileStructur$dtHeadlineFile
+   
    # number of row for dtHeadlineFiles
    dtHeadlineFiles.len <- dtHeadlineFiles[, length(id)]
    # init empty dtHeadline
@@ -353,9 +403,14 @@ spiegel.local.getHeadlines <- function (dtHeadlineFiles, lessInfo = FALSE) {
    startId <- 1
    
    if (dtHeadlineFiles.len > 0) {
-      for(i in 1:nrow(dtHeadlineFiles)) {
-         dtHeadline <- rbind(dtHeadline, 
-                             spiegel.algo.parseHeadlineFile(dtHeadlineFiles[i,], lessInfo=lessInfo))
+      for(i in 1:dtHeadlineFiles.len) {
+         dtHeadline <- rbindlist(list(dtHeadline, 
+                             spiegel.algo.parseHeadlineFile(dtHeadlineFiles[i,], 
+                                                            startID = dtHeadline[, length(id)]+1, 
+                                                            lessInfo=lessInfo)[, idHeadlineFile := i]))
+         
+         # dtHeadline <- rbind(dtHeadline, 
+         #                    spiegel.algo.parseHeadlineFile(dtHeadlineFiles[i,], lessInfo=lessInfo))
       }
    }
    
@@ -364,5 +419,6 @@ spiegel.local.getHeadlines <- function (dtHeadlineFiles, lessInfo = FALSE) {
       print(dtHeadline)
    }
    
-   dtHeadline
+   lsFileStructur$dtHeadline <- dtHeadline
+   lsFileStructur
 }

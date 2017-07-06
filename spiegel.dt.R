@@ -3,6 +3,8 @@ require(lubridate)
 require(data.table)
 
 spiegel.dt.dtHeadline <- function (id                   = numeric(),
+                                   idHeadline           = numeric(),
+                                   idHeadlineFile       = numeric(),
                                    forDate              = as_date(character()),
                                    forTime              = as_datetime(character()),
                                    isBentoLink          = logical(),
@@ -11,15 +13,17 @@ spiegel.dt.dtHeadline <- function (id                   = numeric(),
                                    title                = character(), 
                                    section              = character(), 
                                    link                 = character()) {
-   dfHeadline <- data.table(  id,
-                              forDate,
-                              forTime,
-                              isBentoLink,
-                              isSpiegelPlusLink,
-                              intro, 
-                              title, 
-                              section, 
-                              link)
+   dfHeadline <- data.table(  id                = id,
+                              idHeadline        = idHeadline,
+                              idHeadlineFile    = idHeadlineFile,
+                              forDate           = forDate,
+                              forTime           = forTime,
+                              isBentoLink       = isBentoLink,
+                              isSpiegelPlusLink = isSpiegelPlusLink,
+                              intro             = intro, 
+                              title             = title, 
+                              section           = section, 
+                              link              = link)
    dfHeadline
 }
 
@@ -65,14 +69,12 @@ spiegel.dt.dtDlDir <- function (id                   = numeric(),
 }
 
 
-# spiegel.dt.lsDlDir <- function (forDate              = as_date(character()),
-#                                 dlDir                  = character(),
-#                                 dlDir.fllPath          = character(),
-#                                 HeadlineFile           = spiegel.dt.lsHeadlineFile()) {
-#    lsDlDir <- list(forDate       = forDate,
-#                           dlDir         = dlDir,
-#                           dlDir.fllPath = dlDir.fllPath,
-#                           HeadlineFile  = HeadlineFile)
-# 
-#    lsDlDir
-# }
+spiegel.dt.lsFileStructur <- function (dtDlDir        = spiegel.dt.dtDlDir(),
+                                       dtHeadlineFile = spiegel.dt.dtHeadlineFile(),
+                                       dtHeadline     = spiegel.dt.dtHeadline()) {
+   lsFileStructur <- list( dtDlDir        = dtDlDir,
+                           dtHeadlineFile = dtHeadlineFile,
+                           dtHeadline     = dtHeadline)
+   
+   lsFileStructur
+}
